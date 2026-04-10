@@ -37,5 +37,11 @@ target_link_libraries(${PROJECT_NAME}_tests PRIVATE gtest_main)
 target_include_directories(${PROJECT_NAME}_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 
+add_dependencies(${PROJECT_NAME}_tests refactor_tool)
+target_compile_definitions(${PROJECT_NAME}_tests PRIVATE
+    TOOL_PATH="$<TARGET_FILE:refactor_tool>"
+    TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/tests_data"
+)
+
 include(GoogleTest)
 gtest_discover_tests(refactor_tool_tests)

@@ -61,14 +61,32 @@ void RefactorHandler::handle_nv_dtor(const CXXDestructorDecl *Dtor,
     Diag.Report(Dtor->getLocation(), DiagID);
 }
 
-//todo: необходимо реализовать обработку случая отсутствие override
 void RefactorHandler::handle_miss_override(const CXXMethodDecl *Method,
                             DiagnosticsEngine &Diag,
                             SourceManager &SM) {
-    //Реализуйте Ваш код ниже
+    if (!SM.isInMainFile(Method->getLocation()))
+        return;
+
+    SourceLocation NameLoc = Method->getLocation();
+    const char *Buf = SM.getCharacterData(NameLoc);
+
+    int Offset = 0;
+    int ParenDepth = 0;
+    while (Buf[Offset] != '(') Offset++;
+    ParenDepth = 1;
+    Offset++;
+    while (ParenDepth > 0) {
+        if (Buf[Offset] == '(') ParenDepth++;
+        else if (Buf[Offset] == ')') ParenDepth--;
+        Offset++;
+    }
+
+    SourceLocation InsertLoc = NameLoc.getLocWithOffset(Offset);
+    Rewrite.InsertTextBefore(InsertLoc, " override");
+
     const unsigned DiagID = Diag.getCustomDiagID(
             DiagnosticsEngine::Remark,
-            "Объявлен метод"
+            "Added 'override' to method"
         );
     Diag.Report(Method->getLocation(), DiagID);
 }
@@ -110,8 +128,11 @@ auto NvDtorMatcher()
 
 auto NoOverrideMatcher()
 {
-    //todo: замените код ниже, на свою реализацию, необходимо реализовать матчеры для поиска методов без override
-    return cxxMethodDecl().bind(BindMethodDecl);
+    return cxxMethodDecl(
+        isOverride(),
+        unless(hasAttr(attr::Override)),
+        unless(cxxDestructorDecl())
+    ).bind(BindMethodDecl);
 }
 
 auto NoRefConstVarInRangeLoopMatcher()

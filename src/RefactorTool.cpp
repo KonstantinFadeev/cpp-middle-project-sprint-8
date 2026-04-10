@@ -5,6 +5,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Rewrite/Core/Rewriter.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/Support/CommandLine.h"
 
 #include <unordered_set>
@@ -91,14 +92,29 @@ void RefactorHandler::handle_miss_override(const CXXMethodDecl *Method,
     Diag.Report(Method->getLocation(), DiagID);
 }
 
-//todo: необходимо реализовать обработку случая отсутствие & в range-for
 void RefactorHandler::handle_crange_for(const VarDecl *LoopVar,
                                         DiagnosticsEngine &Diag,
                                         SourceManager &SM){
-    // Реализуйте Ваш код ниже
+    if (!SM.isInMainFile(LoopVar->getLocation()))
+        return;
+
+    QualType Type = LoopVar->getType().getCanonicalType();
+    if (Type->isBuiltinType())
+        return;
+
+    auto *TSI = LoopVar->getTypeSourceInfo();
+    if (!TSI)
+        return;
+
+    TypeLoc TL = TSI->getTypeLoc();
+    SourceLocation TypeEndLoc = Lexer::getLocForEndOfToken(
+        TL.getEndLoc(), 0, SM, Rewrite.getLangOpts());
+
+    Rewrite.InsertTextBefore(TypeEndLoc, "&");
+
     const unsigned DiagID = Diag.getCustomDiagID(
             DiagnosticsEngine::Remark,
-            "Объявлена переменная"
+            "Added '&' to range-for variable"
         );
     Diag.Report(LoopVar->getLocation(), DiagID);
 }
@@ -137,8 +153,14 @@ auto NoOverrideMatcher()
 
 auto NoRefConstVarInRangeLoopMatcher()
 {
-    //todo: замените код ниже, на свою реализацию, необходимо реализовать матчеры для поиска range-for без &
-    return varDecl().bind(BindVarDecl);
+    return cxxForRangeStmt(
+        hasLoopVariable(
+            varDecl(
+                hasType(qualType(isConstQualified())),
+                unless(hasType(referenceType()))
+            ).bind(BindVarDecl)
+        )
+    );
 }
 
 // Конструктор принимает Rewriter для изменения кода.

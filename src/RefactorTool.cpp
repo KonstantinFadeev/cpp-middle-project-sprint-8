@@ -17,34 +17,46 @@ using namespace clang::tooling;
 
 static llvm::cl::OptionCategory ToolCategory("refactor-tool options");
 
+static constexpr const char *BindNonVirtualDtor = "nonVirtualDtor";
+static constexpr const char *BindMethodDecl = "methodDecl";
+static constexpr const char *BindVarDecl = "VarDecl";
+
 // Метод run вызывается для каждого совпадения с матчем. 
 // Мы проверяем тип совпадения по bind-именам и применяем рефакторинг.
 void RefactorHandler::run(const MatchFinder::MatchResult &Result) {
     auto& Diag = Result.Context->getDiagnostics();
     auto& SM = *Result.SourceManager; // Получаем SourceManager для проверки isInMainFile
     
-    if (const auto *Dtor = Result.Nodes.getNodeAs<CXXDestructorDecl>("classDecl")) {
+    if (const auto *Dtor = Result.Nodes.getNodeAs<CXXDestructorDecl>(BindNonVirtualDtor)) {
         handle_nv_dtor(Dtor, Diag, SM);
     }
 
-    if (const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("methodDecl");
+    if (const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>(BindMethodDecl);
         Method && Method->size_overridden_methods() > 0 && !Method->hasAttr<OverrideAttr>()) {
         handle_miss_override(Method, Diag, SM);
     }
 
-    if (const auto *LoopVar = Result.Nodes.getNodeAs<VarDecl>("VarDecl")) {
+    if (const auto *LoopVar = Result.Nodes.getNodeAs<VarDecl>(BindVarDecl)) {
         handle_crange_for(LoopVar, Diag, SM);
     }
 }
 
-//todo: необходимо реализовать обработку случая невиртуального деструктора
 void RefactorHandler::handle_nv_dtor(const CXXDestructorDecl *Dtor,
                             DiagnosticsEngine &Diag,
                             SourceManager &SM) {
-    //Реализуйте Ваш код ниже
+    if (!SM.isInMainFile(Dtor->getLocation()))
+        return;
+
+    unsigned LocHash = Dtor->getLocation().getRawEncoding();
+    if (virtualDtorLocations.count(LocHash))
+        return;
+    virtualDtorLocations.insert(LocHash);
+
+    Rewrite.InsertTextBefore(Dtor->getLocation(), "virtual ");
+
     const unsigned DiagID = Diag.getCustomDiagID(
             DiagnosticsEngine::Remark,
-            "Объявлен деструктор"
+            "Added 'virtual' to destructor"
         );
     Diag.Report(Dtor->getLocation(), DiagID);
 }
@@ -84,20 +96,28 @@ void RefactorHandler::handle_crange_for(const VarDecl *LoopVar,
 */
 auto NvDtorMatcher()
 {
-    //todo: замените код ниже, на свою реализацию, необходимо реализовать матчеры для поиска невиртуальных деструкторов
-    return cxxDestructorDecl().bind("classDecl");
+    return cxxRecordDecl(
+        isDerivedFrom(
+            cxxRecordDecl(
+                has(cxxDestructorDecl(
+                    unless(isVirtual()),
+                    unless(isImplicit())
+                ).bind(BindNonVirtualDtor))
+            )
+        )
+    );
 }
 
 auto NoOverrideMatcher()
 {
     //todo: замените код ниже, на свою реализацию, необходимо реализовать матчеры для поиска методов без override
-    return cxxMethodDecl().bind("methodDecl");
+    return cxxMethodDecl().bind(BindMethodDecl);
 }
 
 auto NoRefConstVarInRangeLoopMatcher()
 {
     //todo: замените код ниже, на свою реализацию, необходимо реализовать матчеры для поиска range-for без &
-    return varDecl().bind("VarDecl");
+    return varDecl().bind(BindVarDecl);
 }
 
 // Конструктор принимает Rewriter для изменения кода.

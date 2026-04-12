@@ -2,7 +2,7 @@
 
 class Base {
 public:
-    virtual ~Base() {}  // Невиртуальный
+    ~Base() {}  // Невиртуальный деструктор — утечка при полиморфном удалении
 };
 
 class Derived : public Base {

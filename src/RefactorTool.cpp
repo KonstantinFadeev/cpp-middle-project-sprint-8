@@ -56,6 +56,13 @@ void RefactorHandler::handle_nv_dtor(const CXXDestructorDecl *Dtor, DiagnosticsE
 
     const unsigned DiagID = Diag.getCustomDiagID(DiagnosticsEngine::Remark, "Added 'virtual' to destructor");
     Diag.Report(Dtor->getLocation(), DiagID);
+
+    if (LogFile.is_open()) {
+        LogFile << "[virtual] " << SM.getFilename(Dtor->getLocation()).str()
+                << ":" << SM.getSpellingLineNumber(Dtor->getLocation())
+                << " Added 'virtual' to destructor\n";
+        LogFile.flush();
+    }
 }
 
 void RefactorHandler::handle_miss_override(const CXXMethodDecl *Method, DiagnosticsEngine &Diag, SourceManager &SM) {
@@ -118,6 +125,13 @@ void RefactorHandler::handle_miss_override(const CXXMethodDecl *Method, Diagnost
 
     const unsigned DiagID = Diag.getCustomDiagID(DiagnosticsEngine::Remark, "Added 'override' to method");
     Diag.Report(Method->getLocation(), DiagID);
+
+    if (LogFile.is_open()) {
+        LogFile << "[override] " << SM.getFilename(Method->getLocation()).str()
+                << ":" << SM.getSpellingLineNumber(Method->getLocation())
+                << " Added 'override' to method\n";
+        LogFile.flush();
+    }
 }
 
 void RefactorHandler::handle_crange_for(const VarDecl *LoopVar, DiagnosticsEngine &Diag, SourceManager &SM) {
@@ -139,6 +153,13 @@ void RefactorHandler::handle_crange_for(const VarDecl *LoopVar, DiagnosticsEngin
 
     const unsigned DiagID = Diag.getCustomDiagID(DiagnosticsEngine::Remark, "Added '&' to range-for variable");
     Diag.Report(LoopVar->getLocation(), DiagID);
+
+    if (LogFile.is_open()) {
+        LogFile << "[range-for] " << SM.getFilename(LoopVar->getLocation()).str()
+                << ":" << SM.getSpellingLineNumber(LoopVar->getLocation())
+                << " Added '&' to range-for variable\n";
+        LogFile.flush();
+    }
 }
 
 // todo: ниже необходимо реализовать матчеры для поиска узлов AST

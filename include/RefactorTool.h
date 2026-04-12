@@ -8,11 +8,13 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <fstream>
 #include <unordered_set>
 
 class RefactorHandler : public clang::ast_matchers::MatchFinder::MatchCallback {
 public:
-    explicit RefactorHandler(clang::Rewriter &Rewrite) : Rewrite(Rewrite) {}
+    explicit RefactorHandler(clang::Rewriter &Rewrite)
+        : Rewrite(Rewrite), LogFile("refactor.log", std::ios::app) {}
     // Метод run вызывается для каждого совпадения с матчем. 
     // Мы проверяем тип совпадения по bind-именам и применяем рефакторинг.
     virtual void run(const clang::ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -35,7 +37,8 @@ private:
                                     clang::SourceManager &SM);
 private:
     clang::Rewriter &Rewrite;
-    std::unordered_set<unsigned> virtualDtorLocations; // Для хранения позиций деструкторов, к которым уже добавлен virtual
+    std::ofstream LogFile;
+    std::unordered_set<unsigned> virtualDtorLocations;
 };
 
 class ComplexConsumer : public clang::ASTConsumer {

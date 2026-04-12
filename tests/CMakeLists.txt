@@ -37,5 +37,17 @@ target_link_libraries(${PROJECT_NAME}_tests PRIVATE gtest_main)
 target_include_directories(${PROJECT_NAME}_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 
+add_dependencies(${PROJECT_NAME}_tests refactor_tool)
+target_compile_definitions(${PROJECT_NAME}_tests PRIVATE
+    TOOL_PATH="$<TARGET_FILE:refactor_tool>"
+    TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/tests_data"
+)
+
+option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
+if(ENABLE_ASAN)
+    target_compile_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+    target_link_options(${PROJECT_NAME}_tests PRIVATE -fsanitize=address)
+endif()
+
 include(GoogleTest)
 gtest_discover_tests(refactor_tool_tests)

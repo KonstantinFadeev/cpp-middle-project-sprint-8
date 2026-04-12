@@ -1,0 +1,22 @@
+=================================================================
+==1476==ERROR: AddressSanitizer: new-delete-type-mismatch on 0xfc1f9b1e0010 in thread T0:
+  object passed to delete has wrong type:
+  size of the allocated type:   8 bytes;
+  size of the deallocated type: 1 bytes.
+    #0 0xffff9c7d3c10 in operator delete(void*, unsigned long) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:155
+    #1 0xaaaaadc40c8c in main /tmp/leak_example_test.cpp:18
+    #2 0xffff9c1922d8  (/lib/aarch64-linux-gnu/libc.so.6+0x222d8) (BuildId: 399cf29a11ad91a5d31f063a4869f3535e7a4b7a)
+    #3 0xffff9c1923b8 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x223b8) (BuildId: 399cf29a11ad91a5d31f063a4869f3535e7a4b7a)
+    #4 0xaaaaadc40b2c in _start (/tmp/leak_example+0xb2c) (BuildId: e5332baa34ae1c345652c832d7cde2a56cc409f1)
+
+0xfc1f9b1e0010 is located 0 bytes inside of 8-byte region [0xfc1f9b1e0010,0xfc1f9b1e0018)
+allocated by thread T0 here:
+    #0 0xffff9c7d2b00 in operator new(unsigned long) ../../../../src/libsanitizer/asan/asan_new_delete.cpp:86
+    #1 0xaaaaadc40c3c in main /tmp/leak_example_test.cpp:17
+    #2 0xffff9c1922d8  (/lib/aarch64-linux-gnu/libc.so.6+0x222d8) (BuildId: 399cf29a11ad91a5d31f063a4869f3535e7a4b7a)
+    #3 0xffff9c1923b8 in __libc_start_main (/lib/aarch64-linux-gnu/libc.so.6+0x223b8) (BuildId: 399cf29a11ad91a5d31f063a4869f3535e7a4b7a)
+    #4 0xaaaaadc40b2c in _start (/tmp/leak_example+0xb2c) (BuildId: e5332baa34ae1c345652c832d7cde2a56cc409f1)
+
+SUMMARY: AddressSanitizer: new-delete-type-mismatch /tmp/leak_example_test.cpp:18 in main
+==1476==HINT: if you don't care about these errors you may set ASAN_OPTIONS=new_delete_type_mismatch=0
+==1476==ABORTING

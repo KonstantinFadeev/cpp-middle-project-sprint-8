@@ -79,7 +79,41 @@ void RefactorHandler::handle_miss_override(const CXXMethodDecl *Method, Diagnost
         Offset++;
     }
 
-    SourceLocation InsertLoc = NameLoc.getLocWithOffset(Offset);
+    int InsertOffset = Offset;
+
+    while (true) {
+        while (std::isspace(static_cast<unsigned char>(Buf[Offset])))
+            Offset++;
+
+        if (Buf[Offset] == '{' || Buf[Offset] == '=' || Buf[Offset] == ';')
+            break;
+
+        if (Buf[Offset] == '/' && Buf[Offset + 1] == '*') {
+            Offset += 2;
+            while (!(Buf[Offset] == '*' && Buf[Offset + 1] == '/'))
+                Offset++;
+            Offset += 2;
+            InsertOffset = Offset;
+            continue;
+        }
+
+        if (Buf[Offset] == '(') {
+            int Depth = 1;
+            Offset++;
+            while (Depth > 0) {
+                if (Buf[Offset] == '(') Depth++;
+                else if (Buf[Offset] == ')') Depth--;
+                Offset++;
+            }
+            InsertOffset = Offset;
+            continue;
+        }
+
+        Offset++;
+        InsertOffset = Offset;
+    }
+
+    SourceLocation InsertLoc = NameLoc.getLocWithOffset(InsertOffset);
     Rewrite.InsertTextBefore(InsertLoc, " override");
 
     const unsigned DiagID = Diag.getCustomDiagID(DiagnosticsEngine::Remark, "Added 'override' to method");

@@ -112,6 +112,69 @@ TEST(Override, DoesNotAddOverrideToDestructor) {
     EXPECT_EQ(result.find("~Derived() override"), std::string::npos);
 }
 
+TEST(Override, HandlesConstQualifier) {
+    std::string input = "class Base {\n"
+                        "public:\n"
+                        "    virtual void foo() const {}\n"
+                        "    virtual ~Base() {}\n"
+                        "};\n"
+                        "class Derived : public Base {\n"
+                        "public:\n"
+                        "    void foo() const {}\n"
+                        "};\n";
+
+    std::string result = runRefactor(input);
+    EXPECT_NE(result.find("void foo() const override {}"), std::string::npos);
+}
+
+TEST(Override, HandlesNoexceptAndRefQualifier) {
+    std::string input = "class Base {\n"
+                        "public:\n"
+                        "    virtual void foo() const noexcept {}\n"
+                        "    virtual void bar() && {}\n"
+                        "    virtual ~Base() {}\n"
+                        "};\n"
+                        "class Derived : public Base {\n"
+                        "public:\n"
+                        "    void foo() const noexcept {}\n"
+                        "    void bar() && {}\n"
+                        "};\n";
+
+    std::string result = runRefactor(input);
+    EXPECT_NE(result.find("void foo() const noexcept override {}"), std::string::npos);
+    EXPECT_NE(result.find("void bar() && override {}"), std::string::npos);
+}
+
+TEST(Override, HandlesBlockComment) {
+    std::string input = "class Base {\n"
+                        "public:\n"
+                        "    virtual void foo() {}\n"
+                        "    virtual ~Base() {}\n"
+                        "};\n"
+                        "class Derived : public Base {\n"
+                        "public:\n"
+                        "    void foo() /* comment */ {}\n"
+                        "};\n";
+
+    std::string result = runRefactor(input);
+    EXPECT_NE(result.find("void foo() /* comment */ override {}"), std::string::npos);
+}
+
+TEST(Override, HandlesNoexceptExpr) {
+    std::string input = "class Base {\n"
+                        "public:\n"
+                        "    virtual void foo() noexcept(true) {}\n"
+                        "    virtual ~Base() {}\n"
+                        "};\n"
+                        "class Derived : public Base {\n"
+                        "public:\n"
+                        "    void foo() noexcept(true) {}\n"
+                        "};\n";
+
+    std::string result = runRefactor(input);
+    EXPECT_NE(result.find("void foo() noexcept(true) override {}"), std::string::npos);
+}
+
 // ===== Range-for =====
 
 TEST(RangeFor, AddsRefToConstAuto) {
